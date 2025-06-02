@@ -3,7 +3,6 @@ plugins {
     id 'com.google.gms.google-services' // Firebase Google Services plugin
 }
 
-
 android {
     namespace 'com.example.pulseguard'
     compileSdk 35
@@ -46,6 +45,9 @@ dependencies {
 
     // Google Sign-In
     implementation 'com.google.android.gms:play-services-auth:21.1.1'
+
+    // Google Fit
+    implementation 'com.google.android.gms:play-services-fitness:21.0.0'
 
     // Testing
     testImplementation libs.junit
