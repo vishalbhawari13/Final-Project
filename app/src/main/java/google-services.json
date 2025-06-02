@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "481351387620",
+    "project_id": "pulseguard-ae091",
+    "storage_bucket": "pulseguard-ae091.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:481351387620:android:8b277bc6083440ba4bdff1",
+        "android_client_info": {
+          "package_name": "com.example.pulseguard"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "481351387620-kn484mj87dp5om2b68svn2kmdbvq7i6t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pulseguard",
+            "certificate_hash": "3094158a2e2f3284ccde8515e51c3f34391df335"
+          }
+        },
+        {
+          "client_id": "481351387620-17n43hhiael9ddokp1j3phntevlcfuui.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2nRsaBZcL3UvGsvec2K8njyaNjo6wbVk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "481351387620-17n43hhiael9ddokp1j3phntevlcfuui.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
