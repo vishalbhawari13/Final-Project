@@ -1,11 +1,12 @@
 package com.example.pulseguard.activities;
 
 import android.Manifest;
-import android.content.pm.PackageManager;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,11 +34,12 @@ import java.util.concurrent.TimeUnit;
 
 public class DashboardActivity extends AppCompatActivity {
 
+    private static final String TAG = "PulseGuardDashboard";
     private static final int GOOGLE_FIT_PERMISSIONS_REQUEST_CODE = 1001;
     private static final int ACTIVITY_RECOGNITION_PERMISSION_REQUEST_CODE = 1002;
-    private static final String TAG = "PulseGuardDashboard";
 
     private TextView tvWelcome, tvSteps, tvCalories, tvHeartRate;
+    private ProgressBar pbSteps, pbCalories, pbHeartRate;
 
     private FitnessOptions fitnessOptions;
 
@@ -47,31 +49,42 @@ public class DashboardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_dashboard);
         setTitle("PulseGuard Dashboard");
 
+        initViews();
+        checkPermissionsAndContinue();
+    }
+
+    private void initViews() {
         tvWelcome = findViewById(R.id.tvWelcome);
         tvSteps = findViewById(R.id.tvSteps);
         tvCalories = findViewById(R.id.tvCalories);
         tvHeartRate = findViewById(R.id.tvHeartRate);
 
+        pbSteps = findViewById(R.id.pbSteps);
+        pbCalories = findViewById(R.id.pbCalories);
+        pbHeartRate = findViewById(R.id.pbHeartRate);
+
         tvWelcome.setText("Welcome to PulseGuard Dashboard!");
 
+        pbSteps.setMax(10000);     // Assuming 10k step goal
+        pbCalories.setMax(500);    // Assuming 500 cal goal
+        pbHeartRate.setMax(200);   // Max healthy heart rate
+    }
+
+    private void checkPermissionsAndContinue() {
         fitnessOptions = FitnessOptions.builder()
                 .addDataType(DataType.TYPE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_READ)
                 .addDataType(DataType.TYPE_CALORIES_EXPENDED, FitnessOptions.ACCESS_READ)
                 .addDataType(DataType.TYPE_HEART_RATE_BPM, FitnessOptions.ACCESS_READ)
                 .build();
 
-        // Check runtime permission for ACTIVITY_RECOGNITION (Android 10+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.ACTIVITY_RECOGNITION},
-                        ACTIVITY_RECOGNITION_PERMISSION_REQUEST_CODE);
-                return; // Wait for permission result
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACTIVITY_RECOGNITION},
+                    ACTIVITY_RECOGNITION_PERMISSION_REQUEST_CODE);
+        } else {
+            requestGoogleFitPermissions();
         }
-
-        requestGoogleFitPermissions();
     }
 
     private void requestGoogleFitPermissions() {
@@ -79,7 +92,6 @@ public class DashboardActivity extends AppCompatActivity {
 
         if (account == null) {
             Toast.makeText(this, "Please sign in with your Google account first.", Toast.LENGTH_LONG).show();
-            // Optionally, launch sign-in intent here
             return;
         }
 
@@ -98,19 +110,18 @@ public class DashboardActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == ACTIVITY_RECOGNITION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 requestGoogleFitPermissions();
             } else {
-                Toast.makeText(this, "Permission for activity recognition denied.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Activity recognition permission denied.", Toast.LENGTH_SHORT).show();
             }
         }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == GOOGLE_FIT_PERMISSIONS_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
                 fetchGoogleFitData();
@@ -118,12 +129,12 @@ public class DashboardActivity extends AppCompatActivity {
                 Toast.makeText(this, "Google Fit permission denied", Toast.LENGTH_SHORT).show();
             }
         }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     private void fetchGoogleFitData() {
         Calendar cal = Calendar.getInstance();
         long endTime = cal.getTimeInMillis();
-
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
@@ -156,11 +167,9 @@ public class DashboardActivity extends AppCompatActivity {
         int totalSteps = 0;
         float totalCalories = 0f;
         Float recentHeartRate = null;
-        long recentHeartRateTimestamp = 0;
+        long latestHeartTimestamp = 0;
 
-        // Process each dataset returned from Google Fit
-        List<DataSet> dataSets = response.getDataSets();
-        for (DataSet dataSet : dataSets) {
+        for (DataSet dataSet : response.getDataSets()) {
             for (DataPoint dp : dataSet.getDataPoints()) {
                 for (Field field : dp.getDataType().getFields()) {
                     switch (field.getName()) {
@@ -171,12 +180,11 @@ public class DashboardActivity extends AppCompatActivity {
                             totalCalories += dp.getValue(field).asFloat();
                             break;
                         case "bpm":
+                            float bpm = dp.getValue(field).asFloat();
                             long timestamp = dp.getTimestamp(TimeUnit.MILLISECONDS);
-                            float currentHeartRate = dp.getValue(field).asFloat();
-                            // Check if this heart rate is the most recent one
-                            if (timestamp > recentHeartRateTimestamp) {
-                                recentHeartRateTimestamp = timestamp;
-                                recentHeartRate = currentHeartRate;
+                            if (timestamp > latestHeartTimestamp) {
+                                latestHeartTimestamp = timestamp;
+                                recentHeartRate = bpm;
                             }
                             break;
                     }
@@ -184,17 +192,24 @@ public class DashboardActivity extends AppCompatActivity {
             }
         }
 
-        // Use 0 if no heart rate found
-        final float heartRateToShow = recentHeartRate != null ? recentHeartRate : 0f;
-        final int stepsToShow = totalSteps;
-        final float caloriesToShow = totalCalories;
+        final int stepsFinal = totalSteps;
+        final float caloriesFinal = totalCalories;
+        final float heartRateFinal = recentHeartRate != null ? recentHeartRate : 0f;
 
-        // Update UI on main thread
         runOnUiThread(() -> {
-            tvSteps.setText("🚶 Steps Today: " + stepsToShow);
-            tvCalories.setText("🔥 Calories Burned: " + String.format("%.1f", caloriesToShow));
-            tvHeartRate.setText("💓 Recent Heart Rate: " + (heartRateToShow > 0 ? String.format("%.1f", heartRateToShow) + " bpm" : "No data"));
+            tvSteps.setText("🚶 Steps: " + stepsFinal);
+            pbSteps.setProgress(stepsFinal);
+
+            tvCalories.setText("🔥 Calories: " + String.format("%.1f", caloriesFinal));
+            pbCalories.setProgress((int) caloriesFinal);
+
+            if (heartRateFinal > 0) {
+                tvHeartRate.setText("💓 Heart Rate: " + String.format("%.1f bpm", heartRateFinal));
+                pbHeartRate.setProgress((int) heartRateFinal);
+            } else {
+                tvHeartRate.setText("💓 Heart Rate: No data");
+                pbHeartRate.setProgress(0);
+            }
         });
     }
-
 }

@@ -1,3 +1,4 @@
+/*
 package com.example.pulseguard.activities;
 
 import android.content.Intent;
@@ -42,3 +43,4 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package com.example.pulseguard.activities;
 
 import android.content.Intent;
@@ -70,3 +71,4 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 }
+*/
