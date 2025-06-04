@@ -3,6 +3,13 @@
     package="com.example.pulseguard"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -25,16 +32,9 @@
         </activity>
 
         <!-- Other Activities -->
-        <activity android:name=".activities.LoginActivity" />
-        <activity android:name=".activities.HomeActivity" />
-        <activity android:name=".activities.ProfileActivity" />
-        <activity android:name=".MainActivity" />
-
-        <!-- Added DashboardActivity -->
-        <activity android:name=".activities.DashboardActivity" />
+        <activity android:name=".activities.HomeActivity" android:exported="false" />
+        <activity android:name=".activities.DashboardActivity" android:exported="false" />
 
     </application>
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-
 
 </manifest>

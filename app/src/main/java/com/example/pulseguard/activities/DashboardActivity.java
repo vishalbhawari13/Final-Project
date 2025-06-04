@@ -26,9 +26,9 @@ import com.google.android.gms.fitness.data.DataPoint;
 import com.google.android.gms.fitness.data.DataSet;
 import com.google.android.gms.fitness.data.DataType;
 import com.google.android.gms.fitness.data.Field;
-import com.google.android.gms.fitness.request.OnDataPointListener;
 import com.google.android.gms.fitness.request.DataReadRequest;
 import com.google.android.gms.fitness.request.DataSourcesRequest;
+import com.google.android.gms.fitness.request.OnDataPointListener;
 import com.google.android.gms.fitness.request.SensorRequest;
 import com.google.android.gms.fitness.result.DataReadResponse;
 
@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 public class DashboardActivity extends AppCompatActivity {
 
     private static final String TAG = "PulseGuardDashboard";
+
     private static final int GOOGLE_FIT_PERMISSIONS_REQUEST_CODE = 1001;
     private static final int ACTIVITY_RECOGNITION_PERMISSION_REQUEST_CODE = 1002;
 
@@ -47,7 +48,9 @@ public class DashboardActivity extends AppCompatActivity {
 
     private FitnessOptions fitnessOptions;
     private SensorsClient sensorsClient;
-    private OnDataPointListener stepListener, heartRateListener;
+
+    private OnDataPointListener stepListener;
+    private OnDataPointListener heartRateListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +59,7 @@ public class DashboardActivity extends AppCompatActivity {
         setTitle("PulseGuard Dashboard");
 
         initViews();
-        checkPermissionsAndContinue();
+        checkPermissionsAndProceed();
     }
 
     private void initViews() {
@@ -71,12 +74,16 @@ public class DashboardActivity extends AppCompatActivity {
 
         tvWelcome.setText("Welcome to PulseGuard Dashboard!");
 
-        pbSteps.setMax(10000);     // Assuming 10k step goal
-        pbCalories.setMax(500);    // Assuming 500 cal goal
-        pbHeartRate.setMax(200);   // Max healthy heart rate
+        // Set progress bar max values for goals
+        pbSteps.setMax(10000);    // Example: 10k steps goal
+        pbCalories.setMax(500);   // Example: 500 calories goal
+        pbHeartRate.setMax(200);  // Max heart rate expected
     }
 
-    private void checkPermissionsAndContinue() {
+    /**
+     * Check for Activity Recognition and Google Fit permissions, request if needed.
+     */
+    private void checkPermissionsAndProceed() {
         fitnessOptions = FitnessOptions.builder()
                 .addDataType(DataType.TYPE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_READ)
                 .addDataType(DataType.TYPE_CALORIES_EXPENDED, FitnessOptions.ACCESS_READ)
@@ -84,16 +91,21 @@ public class DashboardActivity extends AppCompatActivity {
                 .build();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
+                        != PackageManager.PERMISSION_GRANTED) {
+            // Request Activity Recognition permission for API 29+
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACTIVITY_RECOGNITION},
                     ACTIVITY_RECOGNITION_PERMISSION_REQUEST_CODE);
         } else {
-            requestGoogleFitPermissions();
+            requestGoogleFitPermission();
         }
     }
 
-    private void requestGoogleFitPermissions() {
+    /**
+     * Request Google Fit permission for the signed-in Google account.
+     */
+    private void requestGoogleFitPermission() {
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
 
         if (account == null) {
@@ -118,7 +130,7 @@ public class DashboardActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         if (requestCode == ACTIVITY_RECOGNITION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                requestGoogleFitPermissions();
+                requestGoogleFitPermission();
             } else {
                 Toast.makeText(this, "Activity recognition permission denied.", Toast.LENGTH_SHORT).show();
             }
@@ -132,15 +144,25 @@ public class DashboardActivity extends AppCompatActivity {
             if (resultCode == RESULT_OK) {
                 fetchGoogleFitData();
             } else {
-                Toast.makeText(this, "Google Fit permission denied", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Google Fit permission denied.", Toast.LENGTH_SHORT).show();
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
+    /**
+     * Fetch aggregated Google Fit data for the current day.
+     */
     private void fetchGoogleFitData() {
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+        if (account == null) {
+            Toast.makeText(this, "Google account not signed in.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Calendar cal = Calendar.getInstance();
         long endTime = cal.getTimeInMillis();
+
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
@@ -154,30 +176,28 @@ public class DashboardActivity extends AppCompatActivity {
                 .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
                 .build();
 
-        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
-        if (account == null) {
-            Toast.makeText(this, "Google account not signed in.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         Fitness.getHistoryClient(this, account)
                 .readData(readRequest)
                 .addOnSuccessListener(this::displayData)
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error reading Google Fit data: " + e.getMessage());
+                    Log.e(TAG, "Failed to read Google Fit data", e);
                     Toast.makeText(this, "Failed to read Google Fit data", Toast.LENGTH_SHORT).show();
                 });
 
-        subscribeToSensors();
+        subscribeToLiveSensorData();
     }
 
+    /**
+     * Parse data from Google Fit and update UI.
+     */
     private void displayData(DataReadResponse response) {
         int totalSteps = 0;
         float totalCalories = 0f;
-        Float recentHeartRate = null;
+        Float latestHeartRate = null;
         long latestHeartTimestamp = 0;
 
-        for (DataSet dataSet : response.getDataSets()) {
+        List<DataSet> dataSets = response.getDataSets();
+        for (DataSet dataSet : dataSets) {
             for (DataPoint dp : dataSet.getDataPoints()) {
                 for (Field field : dp.getDataType().getFields()) {
                     switch (field.getName()) {
@@ -192,7 +212,7 @@ public class DashboardActivity extends AppCompatActivity {
                             long timestamp = dp.getTimestamp(TimeUnit.MILLISECONDS);
                             if (timestamp > latestHeartTimestamp) {
                                 latestHeartTimestamp = timestamp;
-                                recentHeartRate = bpm;
+                                latestHeartRate = bpm;
                             }
                             break;
                     }
@@ -200,20 +220,25 @@ public class DashboardActivity extends AppCompatActivity {
             }
         }
 
-        final int stepsFinal = totalSteps;
-        final float caloriesFinal = totalCalories;
-        final float heartRateFinal = recentHeartRate != null ? recentHeartRate : 0f;
+        final int stepsToShow = totalSteps;
+        final float caloriesToShow = totalCalories;
+        final float heartRateToShow = latestHeartRate != null ? latestHeartRate : 0f;
 
         runOnUiThread(() -> {
-            tvSteps.setText("🚶 Steps: " + stepsFinal);
-            pbSteps.setProgress(Math.min(stepsFinal, pbSteps.getMax()));
+            tvSteps.setText("🚶 Steps: " + stepsToShow);
+            pbSteps.setProgress(Math.min(stepsToShow, pbSteps.getMax()));
 
-            tvCalories.setText("🔥 Calories: " + String.format("%.1f", caloriesFinal));
-            pbCalories.setProgress(Math.min((int) caloriesFinal, pbCalories.getMax()));
+            if (caloriesToShow > 0) {
+                tvCalories.setText("🔥 Calories: " + String.format("%.1f", caloriesToShow));
+                pbCalories.setProgress(Math.min((int) caloriesToShow, pbCalories.getMax()));
+            } else {
+                tvCalories.setText("🔥 Calories: No data");
+                pbCalories.setProgress(0);
+            }
 
-            if (heartRateFinal > 0) {
-                tvHeartRate.setText("💓 Heart Rate: " + String.format("%.1f bpm", heartRateFinal));
-                pbHeartRate.setProgress(Math.min((int) heartRateFinal, pbHeartRate.getMax()));
+            if (heartRateToShow > 0) {
+                tvHeartRate.setText("💓 Heart Rate: " + String.format("%.1f bpm", heartRateToShow));
+                pbHeartRate.setProgress(Math.min((int) heartRateToShow, pbHeartRate.getMax()));
             } else {
                 tvHeartRate.setText("💓 Heart Rate: No data");
                 pbHeartRate.setProgress(0);
@@ -221,7 +246,10 @@ public class DashboardActivity extends AppCompatActivity {
         });
     }
 
-    private void subscribeToSensors() {
+    /**
+     * Subscribe to live step count and heart rate sensor updates.
+     */
+    private void subscribeToLiveSensorData() {
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
         if (account == null) {
             Toast.makeText(this, "Please sign in with Google", Toast.LENGTH_SHORT).show();
@@ -230,25 +258,33 @@ public class DashboardActivity extends AppCompatActivity {
 
         sensorsClient = Fitness.getSensorsClient(this, account);
 
-        // Step Count Listener
-        stepListener = new OnDataPointListener() {
-            @Override
-            public void onDataPoint(DataPoint dataPoint) {
-                int steps = 0;
-                for (Field field : dataPoint.getDataType().getFields()) {
-                    if ("steps".equals(field.getName())) {
-                        steps = dataPoint.getValue(field).asInt();
-                        break;
-                    }
+        // Unregister previous listeners if any
+        if (stepListener != null) {
+            sensorsClient.remove(stepListener);
+            stepListener = null;
+        }
+        if (heartRateListener != null) {
+            sensorsClient.remove(heartRateListener);
+            heartRateListener = null;
+        }
+
+        // Step listener
+        stepListener = dataPoint -> {
+            int steps = 0;
+            for (Field field : dataPoint.getDataType().getFields()) {
+                if ("steps".equals(field.getName())) {
+                    steps = dataPoint.getValue(field).asInt();
+                    break;
                 }
-                final int finalSteps = steps;
-                runOnUiThread(() -> {
-                    tvSteps.setText("🚶 Steps: " + finalSteps);
-                    pbSteps.setProgress(Math.min(finalSteps, pbSteps.getMax()));
-                });
             }
+            final int finalSteps = steps;
+            runOnUiThread(() -> {
+                tvSteps.setText("🚶 Steps: " + finalSteps);
+                pbSteps.setProgress(Math.min(finalSteps, pbSteps.getMax()));
+            });
         };
 
+        // Register step count sensor listener
         sensorsClient.findDataSources(
                         new DataSourcesRequest.Builder()
                                 .setDataTypes(DataType.TYPE_STEP_COUNT_DELTA)
@@ -265,30 +301,29 @@ public class DashboardActivity extends AppCompatActivity {
                                                     .build(),
                                             stepListener)
                                     .addOnSuccessListener(aVoid -> Log.i(TAG, "Step sensor listener registered"))
-                                    .addOnFailureListener(e -> Log.e(TAG, "Failed to register step sensor listener", e));
+                                    .addOnFailureListener(e -> Log.e(TAG, "Failed to register step listener", e));
+                            break; // register only once
                         }
                     }
                 });
 
-        // Heart Rate Listener
-        heartRateListener = new OnDataPointListener() {
-            @Override
-            public void onDataPoint(DataPoint dataPoint) {
-                float heartRate = 0f;
-                for (Field field : dataPoint.getDataType().getFields()) {
-                    if ("bpm".equals(field.getName())) {
-                        heartRate = dataPoint.getValue(field).asFloat();
-                        break;
-                    }
+        // Heart rate listener
+        heartRateListener = dataPoint -> {
+            float bpm = 0f;
+            for (Field field : dataPoint.getDataType().getFields()) {
+                if ("bpm".equals(field.getName())) {
+                    bpm = dataPoint.getValue(field).asFloat();
+                    break;
                 }
-                final float finalHeartRate = heartRate;
-                runOnUiThread(() -> {
-                    tvHeartRate.setText("💓 Heart Rate: " + String.format("%.1f bpm", finalHeartRate));
-                    pbHeartRate.setProgress(Math.min((int) finalHeartRate, pbHeartRate.getMax()));
-                });
             }
+            final float finalBpm = bpm;
+            runOnUiThread(() -> {
+                tvHeartRate.setText("💓 Heart Rate: " + String.format("%.1f bpm", finalBpm));
+                pbHeartRate.setProgress(Math.min((int) finalBpm, pbHeartRate.getMax()));
+            });
         };
 
+        // Register heart rate sensor listener
         sensorsClient.findDataSources(
                         new DataSourcesRequest.Builder()
                                 .setDataTypes(DataType.TYPE_HEART_RATE_BPM)
@@ -306,6 +341,7 @@ public class DashboardActivity extends AppCompatActivity {
                                             heartRateListener)
                                     .addOnSuccessListener(aVoid -> Log.i(TAG, "Heart rate sensor listener registered"))
                                     .addOnFailureListener(e -> Log.e(TAG, "Failed to register heart rate listener", e));
+                            break; // register only once
                         }
                     }
                 });
@@ -317,9 +353,11 @@ public class DashboardActivity extends AppCompatActivity {
         if (sensorsClient != null) {
             if (stepListener != null) {
                 sensorsClient.remove(stepListener);
+                stepListener = null;
             }
             if (heartRateListener != null) {
                 sensorsClient.remove(heartRateListener);
+                heartRateListener = null;
             }
         }
     }

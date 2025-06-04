@@ -1,13 +1,19 @@
 package com.example.pulseguard.activities;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.example.pulseguard.R;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -29,6 +35,17 @@ public class IntroActivity extends AppCompatActivity {
     private GoogleSignInClient googleSignInClient;
     private FirebaseAuth mAuth;
 
+    // Permission launcher for POST_NOTIFICATIONS
+    private ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Log.d("IntroActivity", "Notification permission granted.");
+                } else {
+                    Log.w("IntroActivity", "Notification permission denied.");
+                    Toast.makeText(this, "Notification permission is needed to receive alerts.", Toast.LENGTH_LONG).show();
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,7 +62,11 @@ public class IntroActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
 
         btnStartLogin.setOnClickListener(v -> signIn());
+
+        checkAndRequestNotificationPermission();
     }
+
+
 
     @Override
     protected void onStart() {
@@ -70,7 +91,11 @@ public class IntroActivity extends AppCompatActivity {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
-                firebaseAuthWithGoogle(account.getIdToken());
+                if (account != null) {
+                    firebaseAuthWithGoogle(account.getIdToken());
+                } else {
+                    Toast.makeText(this, "Google sign-in failed: account is null", Toast.LENGTH_LONG).show();
+                }
             } catch (ApiException e) {
                 Log.w("IntroActivity", "Google sign in failed", e);
                 Toast.makeText(this, "Google sign-in failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -98,5 +123,15 @@ public class IntroActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private void checkAndRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                // Request the permission
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
     }
 }
