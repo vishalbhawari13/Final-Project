@@ -35,22 +35,22 @@ android {
 }
 
 dependencies {
-    // AndroidX + Material
-    implementation libs.appcompat
-    implementation libs.material
+    // AndroidX dependencies (replace if you don't use version catalogs)
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
 
     // Firebase BoM (Bill of Materials)
-    implementation platform('com.google.firebase:firebase-bom:32.7.3') // Always latest stable
+    implementation platform('com.google.firebase:firebase-bom:33.14.0')
     implementation 'com.google.firebase:firebase-auth'
 
     // Google Sign-In
-    implementation 'com.google.android.gms:play-services-auth:21.1.1'
+    implementation 'com.google.android.gms:play-services-auth:21.3.0'
 
-    // Google Fit
-    implementation 'com.google.android.gms:play-services-fitness:21.0.0'
+    // Google Fit (updated to latest stable)
+    implementation 'com.google.android.gms:play-services-fitness:21.2.0'
 
-    // Testing
-    testImplementation libs.junit
-    androidTestImplementation libs.ext.junit
-    androidTestImplementation libs.espresso.core
+    // Testing dependencies
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
 }
