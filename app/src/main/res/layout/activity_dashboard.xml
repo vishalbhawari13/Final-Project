@@ -161,10 +161,37 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- SOS Contact EditText -->
+            <EditText
+                android:id="@+id/et_sos_contact"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="Enter emergency contact number"
+                android:inputType="phone"
+                android:padding="12dp"
+                android:layout_marginTop="24dp"
+                android:background="@android:drawable/edit_text"
+                android:textColor="#222222"
+                android:textSize="16sp"
+                app:layout_constraintTop_toBottomOf="@id/cardHeartRate"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
 
-    <!-- Floating Export Button bottom-right -->
+    <!-- Floating SOS Button bottom-left -->
+    <Button
+        android:id="@+id/btn_sos"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="SOS"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="16dp"
+        android:backgroundTint="#F44336"
+        android:textColor="@android:color/white" />
+
+    <!-- Floating Export PDF Button bottom-right -->
     <Button
         android:id="@+id/btnExportPdf"
         android:layout_width="wrap_content"

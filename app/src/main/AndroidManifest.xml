@@ -1,18 +1,25 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.pulseguard"
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Storage permissions for Android 9 and below -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
+    <!-- Storage permissions with maxSdkVersion 28 for WRITE_EXTERNAL_STORAGE -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <!-- SOS related permissions -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Telephony feature (optional) -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -25,7 +32,7 @@
         android:theme="@style/Theme.PulseGuard"
         tools:targetApi="31">
 
-        <!-- Launcher Activity -->
+        <!-- Main launcher activity -->
         <activity
             android:name=".activities.IntroActivity"
             android:exported="true">
@@ -35,14 +42,18 @@
             </intent-filter>
         </activity>
 
-        <!-- Other Activities -->
-        <activity android:name=".activities.HomeActivity" android:exported="false" />
-        <activity android:name=".activities.DashboardActivity" android:exported="false" />
+        <!-- Other activities -->
+        <activity
+            android:name=".activities.HomeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.DashboardActivity"
+            android:exported="false" />
 
-        <!-- FileProvider for sharing PDFs -->
+        <!-- FileProvider for sharing files (PDFs, images, etc) -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
+            android:authorities="com.example.pulseguard.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

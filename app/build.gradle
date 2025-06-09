@@ -36,23 +36,26 @@ android {
 
 dependencies {
     // AndroidX dependencies
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'com.google.android.material:material:1.12.0'
 
     // Firebase BoM (Bill of Materials)
-    implementation platform('com.google.firebase:firebase-bom:33.14.0')
+    implementation platform('com.google.firebase:firebase-bom:33.15.0')
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-firestore:25.1.4'
 
     // Google Sign-In
     implementation 'com.google.android.gms:play-services-auth:21.3.0'
 
-    // Google Fit (latest stable)
+    // Google Fit
     implementation 'com.google.android.gms:play-services-fitness:21.2.0'
 
-    // AndroidX Core (compatible with AGP 8.4.0)
-    implementation 'androidx.core:core:1.10.1'
-    implementation 'androidx.core:core-ktx:1.10.1'
+    // Google Activity Recognition
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
+
+    // AndroidX Core
+    implementation 'androidx.core:core:1.16.0'
+    implementation 'androidx.core:core-ktx:1.16.0'
 
     // Testing dependencies
     testImplementation 'junit:junit:4.13.2'
